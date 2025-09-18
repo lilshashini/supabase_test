@@ -21,6 +21,7 @@ import psycopg2
 from urllib.parse import quote_plus
 from sqlalchemy import text  # Add this import
 from dotenv import load_dotenv
+import openai
 
 
 load_dotenv()
