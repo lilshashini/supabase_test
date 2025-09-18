@@ -856,10 +856,6 @@ def auto_initialize_database():
 # Auto-initialize database on app start
 auto_initialize_database()
 
-# Update the main title section to show connection status:
-
-st.title("Althinect Intelligence Bot")
-
 # Show connection status in main area
 if "db" in st.session_state and st.session_state.db is not None:
     st.success("🟢 Database Connected - Ready to analyze your data!")
