@@ -1,0 +1,199 @@
+2025-09-17 12:39:46,247 - __main__ - ERROR - Supabase client initialization failed: supabase_url is required
+2025-09-17 12:39:46,251 - __main__ - ERROR - Supabase connection failed via UI: supabase_url is required
+2025-09-17 12:41:05,301 - __main__ - INFO - Supabase client initialized successfully
+2025-09-17 12:41:05,302 - __main__ - INFO - Attempting to connect to Supabase transaction pooler: aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+2025-09-17 12:41:13,240 - __main__ - INFO - Supabase database connection successful
+2025-09-17 12:41:13,252 - __main__ - INFO - Supabase database connected successfully via UI
+2025-09-17 12:42:19,053 - __main__ - INFO - User query received: what date to what date do you have data
+2025-09-17 12:42:19,059 - __main__ - INFO - Processing user query: what date to what date do you have data
+2025-09-17 12:42:19,060 - __main__ - INFO - Analyzing query for visualization: what date to what date do you have data
+2025-09-17 12:42:19,061 - __main__ - INFO - Visualization needed: False, Chart type: bar, Multi-machine: False
+2025-09-17 12:42:25,810 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:42:25,829 - __main__ - INFO - Generated SQL query: SELECT 
+    MIN(DATE_TRUNC('day', actual_start_time)) AS earliest_date,
+    MAX(DATE_TRUNC('day', actual_end_time)) AS latest_date
+FROM daily_production
+WHERE actual_start_time IS NOT NULL
+  AND actual_end_time IS NOT NULL
+2025-09-17 12:42:26,231 - __main__ - INFO - SQL query executed successfully. Response length: 76
+2025-09-17 12:42:28,012 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:42:28,017 - __main__ - INFO - Response generated successfully
+2025-09-17 12:42:28,022 - __main__ - INFO - Conversation turn completed
+2025-09-17 12:42:55,870 - __main__ - INFO - User query received: what are the machines do you have
+2025-09-17 12:42:55,873 - __main__ - INFO - Processing user query: what are the machines do you have
+2025-09-17 12:42:55,873 - __main__ - INFO - Analyzing query for visualization: what are the machines do you have
+2025-09-17 12:42:55,874 - __main__ - INFO - Visualization needed: False, Chart type: bar, Multi-machine: False
+2025-09-17 12:42:58,868 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:42:58,872 - __main__ - INFO - Generated SQL query: SELECT DISTINCT device_name AS machine_name
+FROM daily_production
+ORDER BY machine_name
+2025-09-17 12:42:59,227 - __main__ - INFO - SQL query executed successfully. Response length: 45
+2025-09-17 12:43:01,154 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:43:01,159 - __main__ - INFO - Response generated successfully
+2025-09-17 12:43:01,161 - __main__ - INFO - Conversation turn completed
+2025-09-17 12:48:20,434 - __main__ - INFO - User query received: in consumption data from what date to what date data available
+2025-09-17 12:48:20,442 - __main__ - INFO - Processing user query: in consumption data from what date to what date data available
+2025-09-17 12:48:20,442 - __main__ - INFO - Analyzing query for visualization: in consumption data from what date to what date data available
+2025-09-17 12:48:20,443 - __main__ - INFO - Visualization needed: False, Chart type: bar, Multi-machine: False
+2025-09-17 12:48:23,421 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:48:23,428 - __main__ - INFO - Generated SQL query: SELECT 
+    MIN(actual_start_time) AS earliest_date,
+    MAX(actual_end_time) AS latest_date
+FROM daily_consumption;
+2025-09-17 12:48:23,764 - __main__ - INFO - SQL query executed successfully. Response length: 142
+2025-09-17 12:48:26,136 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:48:26,140 - __main__ - INFO - Response generated successfully
+2025-09-17 12:48:26,142 - __main__ - INFO - Conversation turn completed
+2025-09-17 12:48:50,761 - __main__ - INFO - User query received: in production data from what date to what date data available
+
+
+2025-09-17 12:48:50,766 - __main__ - INFO - Processing user query: in production data from what date to what date data available
+
+
+2025-09-17 12:48:50,766 - __main__ - INFO - Analyzing query for visualization: in production data from what date to what date data available
+
+
+2025-09-17 12:48:50,766 - __main__ - INFO - Visualization needed: False, Chart type: bar, Multi-machine: False
+2025-09-17 12:48:53,927 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:48:53,932 - __main__ - INFO - Generated SQL query: SELECT 
+    MIN(actual_start_time) AS earliest_production_date,
+    MAX(actual_end_time) AS latest_production_date
+FROM daily_production
+WHERE actual_start_time IS NOT NULL
+  AND actual_end_time IS NOT NULL;
+2025-09-17 12:48:54,206 - __main__ - INFO - SQL query executed successfully. Response length: 78
+2025-09-17 12:48:56,505 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:48:56,508 - __main__ - INFO - Response generated successfully
+2025-09-17 12:48:56,510 - __main__ - INFO - Conversation turn completed
+2025-09-17 12:49:02,363 - __main__ - INFO - User query received: Show all three machines production by each machine in April with bar chart for all 30 day
+2025-09-17 12:49:02,366 - __main__ - INFO - Processing user query: Show all three machines production by each machine in April with bar chart for all 30 day
+2025-09-17 12:49:02,367 - __main__ - INFO - Analyzing query for visualization: Show all three machines production by each machine in April with bar chart for all 30 day
+2025-09-17 12:49:02,367 - __main__ - INFO - Visualization needed: True, Chart type: multi_machine_bar, Multi-machine: True
+2025-09-17 12:49:10,605 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:49:10,609 - __main__ - INFO - Generated SQL query: SELECT 
+    DATE_TRUNC('day', actual_start_time)::date AS production_date,
+    device_name AS machine_name,
+    SUM(production_output) AS daily_production
+FROM daily_production
+WHERE EXTRACT(YEAR FROM actual_start_time) = 2025
+    AND EXTRACT(MONTH FROM actual_start_time) = 4
+    AND production_output IS NOT NULL
+    AND production_output > 0
+GROUP BY DATE_TRUNC('day', actual_start_time), device_name
+ORDER BY production_date, machine_name
+2025-09-17 12:49:11,346 - __main__ - INFO - SQL query executed successfully. Response length: 3582
+2025-09-17 12:49:13,057 - __main__ - INFO - DataFrame created with shape: (70, 3)
+2025-09-17 12:49:13,058 - __main__ - INFO - Creating visualization: multi_machine_bar
+2025-09-17 12:49:13,058 - __main__ - INFO - DataFrame shape: (70, 3)
+2025-09-17 12:49:13,058 - __main__ - INFO - DataFrame columns: ['production_date', 'machine_name', 'daily_production']
+2025-09-17 12:49:13,074 - __main__ - INFO - DataFrame sample data:
+  production_date machine_name  daily_production
+0      2025-04-01     Machine1          32208.80
+1      2025-04-01     Machine2          23535.48
+2      2025-04-01     Machine3          31375.66
+3      2025-04-02     Machine1          33754.40
+4      2025-04-02     Machine2          11579.04
+2025-09-17 12:49:13,086 - __main__ - INFO - Converted column production_date to datetime
+2025-09-17 12:49:13,086 - __main__ - INFO - Numeric columns: ['daily_production']
+2025-09-17 12:49:13,087 - __main__ - INFO - Categorical columns: ['production_date', 'machine_name']
+2025-09-17 12:49:13,087 - __main__ - INFO - Detected columns - Date: production_date, Machine: machine_name, Value: daily_production
+2025-09-17 12:49:13,175 - __main__ - INFO - Visualization created successfully
+2025-09-17 12:49:19,948 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:49:19,967 - __main__ - INFO - Response generated successfully
+2025-09-17 12:49:19,973 - __main__ - INFO - Conversation turn completed
+2025-09-17 12:49:29,179 - __main__ - INFO - User query received: Show all three machines production by each machine in April with line chart for all 30 day
+2025-09-17 12:49:29,186 - __main__ - INFO - Processing user query: Show all three machines production by each machine in April with line chart for all 30 day
+2025-09-17 12:49:29,186 - __main__ - INFO - Analyzing query for visualization: Show all three machines production by each machine in April with line chart for all 30 day
+2025-09-17 12:49:29,186 - __main__ - INFO - Visualization needed: True, Chart type: line, Multi-machine: True
+2025-09-17 12:49:33,767 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:49:33,772 - __main__ - INFO - Generated SQL query: SELECT 
+    DATE_TRUNC('day', actual_start_time)::date AS production_date,
+    device_name AS machine_name,
+    SUM(production_output) AS daily_production
+FROM daily_production
+WHERE EXTRACT(YEAR FROM actual_start_time) = 2025
+    AND EXTRACT(MONTH FROM actual_start_time) = 4
+    AND production_output IS NOT NULL
+    AND production_output > 0
+GROUP BY DATE_TRUNC('day', actual_start_time), device_name
+ORDER BY production_date, machine_name
+2025-09-17 12:49:34,274 - __main__ - INFO - SQL query executed successfully. Response length: 3582
+2025-09-17 12:49:34,735 - __main__ - INFO - DataFrame created with shape: (70, 3)
+2025-09-17 12:49:34,737 - __main__ - INFO - Creating visualization: line
+2025-09-17 12:49:34,737 - __main__ - INFO - DataFrame shape: (70, 3)
+2025-09-17 12:49:34,737 - __main__ - INFO - DataFrame columns: ['production_date', 'machine_name', 'daily_production']
+2025-09-17 12:49:34,753 - __main__ - INFO - DataFrame sample data:
+  production_date machine_name  daily_production
+0      2025-04-01     Machine1          32208.80
+1      2025-04-01     Machine2          23535.48
+2      2025-04-01     Machine3          31375.66
+3      2025-04-02     Machine1          33754.40
+4      2025-04-02     Machine2          11579.04
+2025-09-17 12:49:34,767 - __main__ - INFO - Converted column production_date to datetime
+2025-09-17 12:49:34,767 - __main__ - INFO - Numeric columns: ['daily_production']
+2025-09-17 12:49:34,767 - __main__ - INFO - Categorical columns: ['production_date', 'machine_name']
+2025-09-17 12:49:34,806 - __main__ - INFO - Visualization created successfully
+2025-09-17 12:49:41,751 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-17 12:49:41,756 - __main__ - INFO - Response generated successfully
+2025-09-17 12:49:41,757 - __main__ - INFO - Conversation turn completed
+2025-09-17 13:31:15,570 - __main__ - INFO - Supabase client initialized successfully
+2025-09-17 13:31:15,571 - __main__ - INFO - Attempting to connect to Supabase transaction pooler: aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+2025-09-17 13:31:36,945 - __main__ - INFO - Supabase database connection successful
+2025-09-17 13:31:36,954 - __main__ - INFO - Supabase database connected successfully via UI
+2025-09-18 17:39:30,933 - __main__ - INFO - Supabase client initialized successfully
+2025-09-18 17:39:30,934 - __main__ - INFO - Attempting to connect to Supabase transaction pooler: aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+2025-09-18 17:39:36,063 - __main__ - INFO - Supabase database connection successful
+2025-09-18 17:39:36,066 - __main__ - INFO - Supabase database connected successfully via UI
+2025-09-18 17:39:58,855 - __main__ - INFO - User query received: what is the production of 3rd of august 2025
+2025-09-18 17:39:58,857 - __main__ - INFO - Processing user query: what is the production of 3rd of august 2025
+2025-09-18 17:39:58,857 - __main__ - INFO - Analyzing query for visualization: what is the production of 3rd of august 2025
+2025-09-18 17:39:58,857 - __main__ - INFO - Visualization needed: False, Chart type: bar, Multi-machine: False
+2025-09-18 17:40:03,547 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-18 17:40:03,565 - __main__ - INFO - Generated SQL query: SELECT 
+    device_name AS machine_name,
+    SUM(production_output) AS daily_production
+FROM daily_production
+WHERE DATE_TRUNC('day', actual_start_time) = '2025-08-03'::date
+    AND production_output IS NOT NULL
+    AND production_output > 0
+GROUP BY device_name
+ORDER BY machine_name
+2025-09-18 17:40:03,782 - __main__ - INFO - SQL query executed successfully. Response length: 69
+2025-09-18 17:40:06,250 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-18 17:40:06,254 - __main__ - INFO - Response generated successfully
+2025-09-18 17:40:06,258 - __main__ - INFO - Conversation turn completed
+2025-09-18 17:40:40,373 - __main__ - INFO - User query received: give me a line chart including all the production of machine in august 2025
+2025-09-18 17:40:40,383 - __main__ - INFO - Processing user query: give me a line chart including all the production of machine in august 2025
+2025-09-18 17:40:40,384 - __main__ - INFO - Analyzing query for visualization: give me a line chart including all the production of machine in august 2025
+2025-09-18 17:40:40,385 - __main__ - INFO - Visualization needed: True, Chart type: line, Multi-machine: False
+2025-09-18 17:40:43,534 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-18 17:40:43,539 - __main__ - INFO - Generated SQL query: SELECT 
+    DATE_TRUNC('day', actual_start_time)::date AS production_date,
+    device_name AS machine_name,
+    SUM(production_output) AS daily_production
+FROM daily_production
+WHERE EXTRACT(YEAR FROM actual_start_time) = 2025
+    AND EXTRACT(MONTH FROM actual_start_time) = 8
+    AND production_output IS NOT NULL
+    AND production_output > 0
+GROUP BY DATE_TRUNC('day', actual_start_time), device_name
+ORDER BY production_date, machine_name
+2025-09-18 17:40:43,852 - __main__ - INFO - SQL query executed successfully. Response length: 4716
+2025-09-18 17:40:45,026 - __main__ - INFO - DataFrame created with shape: (93, 3)
+2025-09-18 17:40:45,027 - __main__ - INFO - Creating visualization: line
+2025-09-18 17:40:45,027 - __main__ - INFO - DataFrame shape: (93, 3)
+2025-09-18 17:40:45,028 - __main__ - INFO - DataFrame columns: ['production_date', 'machine_name', 'daily_production']
+2025-09-18 17:40:45,045 - __main__ - INFO - DataFrame sample data:
+  production_date machine_name  daily_production
+0      2025-08-01     Machine1           33686.2
+1      2025-08-01     Machine2           27427.0
+2      2025-08-01     Machine3           18182.0
+3      2025-08-02     Machine1           27153.8
+4      2025-08-02     Machine2           22445.0
+2025-09-18 17:40:45,051 - __main__ - INFO - Converted column production_date to datetime
+2025-09-18 17:40:45,051 - __main__ - INFO - Numeric columns: ['daily_production']
+2025-09-18 17:40:45,051 - __main__ - INFO - Categorical columns: ['production_date', 'machine_name']
+2025-09-18 17:40:45,153 - __main__ - INFO - Visualization created successfully
+2025-09-18 17:40:56,659 - httpx - INFO - HTTP Request: POST https://althinect-ai.openai.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview "HTTP/1.1 200 OK"
+2025-09-18 17:40:56,668 - __main__ - INFO - Response generated successfully
+2025-09-18 17:40:56,674 - __main__ - INFO - Conversation turn completed

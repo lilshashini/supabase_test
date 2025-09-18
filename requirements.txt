@@ -1,0 +1,18 @@
+# Core requirements
+streamlit
+pandas
+plotly
+numpy
+python-dotenv
+supabase
+sqlalchemy
+psycopg2
+langchain-core
+langchain-community
+langchain-openai
+
+# Optional (for Azure OpenAI)
+openai
+
+# Logging and system
+# (logging, sys, os, re, datetime, urllib are standard library)
