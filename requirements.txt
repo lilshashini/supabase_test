@@ -10,9 +10,14 @@ psycopg2-binary
 langchain-core
 langchain-community
 langchain-openai
+langchain
+mysql-connector-python
+
 
 # Optional (for Azure OpenAI)
 openai
 
 # Logging and system
 # (logging, sys, os, re, datetime, urllib are standard library)
+
+
