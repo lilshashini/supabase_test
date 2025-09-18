@@ -755,69 +755,115 @@ st.set_page_config(page_title="Althinect Intelligence Bot", page_icon="📊")
 st.title("Althinect Intelligence Bot")
 
 # Supabase sidebar
+# Replace the entire sidebar section with this simplified version:
+
 with st.sidebar:
-    st.subheader("⚙️ Supabase Database Settings")
-    st.write("Connect to your Supabase PostgreSQL database")
+    st.subheader("🔌 Database Connection")
     
-    # Pre-populate from environment variables
-    default_url = get_env_var("SUPABASE_URL", "")
-    default_anon_key = get_env_var("SUPABASE_ANON_KEY", "")
-    default_db_password = get_env_var("SUPABASE_DB_PASSWORD", "")
-    
-    st.text_input("Supabase URL", value=default_url, key="SupabaseUrl", 
-                  help="Format: https://your-project-id.supabase.co")
-    st.text_input("Anon Key", value=default_anon_key, key="SupabaseAnonKey", type="password",
-                  help="Your Supabase anonymous/public key")
-    st.text_input("Database Password", type="password", value=default_db_password, key="SupabaseDbPassword",
-                  help="Your Supabase database password")
-    
-    # Connection status indicator
-    connection_status = st.empty()
-    
-    if st.button("🔌 Connect to Supabase", type="primary"):
-        with st.spinner("Connecting to Supabase database..."):
+    # Show connection status
+    if "db" in st.session_state and st.session_state.db is not None:
+        st.success("✅ Connected to Supabase!")
+        
+        # Optional: Show disconnect button
+        if st.button("🔌 Reconnect Database", type="secondary"):
             try:
-                # Initialize Supabase client
-                supabase_client = init_supabase_client(
-                    st.session_state["SupabaseUrl"],
-                    st.session_state["SupabaseAnonKey"]
-                )
-                st.session_state.supabase_client = supabase_client
-                
-                # Initialize database connection
-                db = init_supabase_database(
-                    st.session_state["SupabaseUrl"],
-                    st.session_state["SupabaseAnonKey"],
-                    st.session_state["SupabaseDbPassword"]
-                )
-                st.session_state.db = db
-                
-                st.success("✅ Connected to Supabase!")
-                logger.info("Supabase database connected successfully via UI")
-                
-                # Test the connection with a simple query
-                try:
-                    test_result = db.run("SELECT version();")
-                    st.info(f"📡 PostgreSQL Version: {test_result}")
-                except Exception as e:
-                    st.warning(f"⚠️ Connection established but query test failed: {str(e)}")
+                with st.spinner("Reconnecting to database..."):
+                    # Re-initialize database connection
+                    db = init_supabase_database(
+                        get_env_var("SUPABASE_URL"),
+                        get_env_var("SUPABASE_ANON_KEY"),
+                        get_env_var("SUPABASE_DB_PASSWORD")
+                    )
+                    st.session_state.db = db
+                    st.success("✅ Database reconnected!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"❌ Reconnection failed: {str(e)}")
+                st.session_state.db = None
+    else:
+        st.warning("🔴 Database Not Connected")
+        
+        if st.button("🔌 Connect to Database", type="primary"):
+            try:
+                with st.spinner("Connecting to database..."):
+                    # Initialize Supabase client
+                    supabase_client = init_supabase_client(
+                        get_env_var("SUPABASE_URL"),
+                        get_env_var("SUPABASE_ANON_KEY")
+                    )
+                    st.session_state.supabase_client = supabase_client
+                    
+                    # Initialize database connection
+                    db = init_supabase_database(
+                        get_env_var("SUPABASE_URL"),
+                        get_env_var("SUPABASE_ANON_KEY"),
+                        get_env_var("SUPABASE_DB_PASSWORD")
+                    )
+                    st.session_state.db = db
+                    
+                    st.success("✅ Connected to Supabase!")
+                    logger.info("Supabase database connected successfully")
+                    st.rerun()
                     
             except Exception as e:
-                error_msg = f"❌ Supabase connection failed: {str(e)}"
+                error_msg = f"❌ Database connection failed: {str(e)}"
                 st.error(error_msg)
-                logger.error(f"Supabase connection failed via UI: {str(e)}")
+                logger.error(f"Database connection failed: {str(e)}")
                 
                 # Provide helpful error messages
                 if "authentication failed" in str(e).lower():
-                    st.info("💡 **Tip**: Check your database password. This is different from your Supabase project password.")
+                    st.info("💡 **Tip**: Check your database credentials in environment variables.")
                 elif "could not translate host name" in str(e).lower():
-                    st.info("💡 **Tip**: Verify your Supabase URL format (https://your-project-id.supabase.co)")
+                    st.info("💡 **Tip**: Verify your Supabase URL in environment variables.")
                 elif "connection refused" in str(e).lower():
-                    st.info("💡 **Tip**: Make sure your Supabase project is not paused and database is accessible.")
-    
-    
-    else:
-        st.warning("🔴 Supabase Not Connected")
+                    st.info("💡 **Tip**: Make sure your Supabase project is active.")
+
+# Add this function right after the imports section to auto-initialize the database:
+
+def auto_initialize_database():
+    """Auto-initialize database connection if credentials are available"""
+    try:
+        # Check if all required environment variables are available
+        supabase_url = get_env_var("SUPABASE_URL")
+        supabase_key = get_env_var("SUPABASE_ANON_KEY") 
+        db_password = get_env_var("SUPABASE_DB_PASSWORD")
+        
+        if supabase_url and supabase_key and db_password:
+            if "db" not in st.session_state or st.session_state.db is None:
+                logger.info("Auto-initializing database connection...")
+                
+                # Initialize Supabase client
+                supabase_client = init_supabase_client(supabase_url, supabase_key)
+                st.session_state.supabase_client = supabase_client
+                
+                # Initialize database connection
+                db = init_supabase_database(supabase_url, supabase_key, db_password)
+                st.session_state.db = db
+                
+                logger.info("Database auto-initialized successfully")
+                return True
+        else:
+            logger.warning("Missing database credentials in environment variables")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Auto-initialization failed: {str(e)}")
+        return False
+
+# Add this line right after st.set_page_config and before st.title:
+
+# Auto-initialize database on app start
+auto_initialize_database()
+
+# Update the main title section to show connection status:
+
+st.title("Althinect Intelligence Bot")
+
+# Show connection status in main area
+if "db" in st.session_state and st.session_state.db is not None:
+    st.success("🟢 Database Connected - Ready to analyze your data!")
+else:
+    st.warning("🟡 Database not connected - Please connect using the sidebar")
         
 
 # Chat interface
