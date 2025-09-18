@@ -6,7 +6,7 @@ numpy
 python-dotenv
 supabase
 sqlalchemy
-psycopg2
+psycopg2-binary
 langchain-core
 langchain-community
 langchain-openai
