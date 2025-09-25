@@ -137,9 +137,9 @@ def calculate_efficiency_metrics(db: SQLDatabase, device_name: str = None, time_
         SELECT 
             {time_group} AS time_period,
             device_name AS machine_name,
-            ROUND(AVG(efficiency), 2) AS efficiency_percent,
-            ROUND(MIN(efficiency), 2) AS min_efficiency,
-            ROUND(MAX(efficiency), 2) AS max_efficiency,
+            ROUND(AVG(efficiency)::numeric, 2) AS efficiency_percent,
+            ROUND(MIN(efficiency)::numeric, 2) AS min_efficiency,
+            ROUND(MAX(efficiency)::numeric, 2) AS max_efficiency,
             COUNT(*) AS reading_count
         FROM daily_utilization
         WHERE {where_clause}
@@ -187,9 +187,9 @@ def calculate_utilization_metrics(db: SQLDatabase, device_name: str = None, time
         SELECT 
             {time_group} AS time_period,
             device_name AS machine_name,
-            ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100), 2) AS utilization_percent,
-            ROUND(SUM(on_time_seconds) / 3600, 2) AS total_on_hours,
-            ROUND(SUM(off_time_seconds) / 3600, 2) AS total_off_hours,
+            ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100)::numeric, 2) AS utilization_percent,
+            ROUND((SUM(on_time_seconds) / 3600)::numeric, 2) AS total_on_hours,
+            ROUND((SUM(off_time_seconds) / 3600)::numeric, 2) AS total_off_hours,
             COUNT(*) AS reading_count
         FROM daily_utilization
         WHERE {where_clause}
@@ -281,8 +281,8 @@ def calculate_comprehensive_metrics(db: SQLDatabase, device_name: str = None, ti
             {time_group} AS time_period,
             dp.device_name AS machine_name,
             COALESCE(SUM(dp.production_output), 0) AS total_production,
-            COALESCE(ROUND(AVG(du.efficiency), 2), 0) AS efficiency_percent,
-            COALESCE(ROUND(AVG((du.on_time_seconds / NULLIF(du.total_window_time_seconds, 0)) * 100), 2), 0) AS utilization_percent,
+            COALESCE(ROUND(AVG(du.efficiency)::numeric, 2), 0) AS efficiency_percent,
+            COALESCE(ROUND(AVG((du.on_time_seconds / NULLIF(du.total_window_time_seconds, 0)) * 100)::numeric, 2), 0) AS utilization_percent,
             COALESCE(SUM(dc.daily_consumption), 0) AS total_consumption,
             COUNT(DISTINCT dp.id) AS production_records,
             COUNT(DISTINCT du.id) AS utilization_records,
@@ -506,11 +506,12 @@ def get_enhanced_sql_chain(db):
     
     6. Column naming conventions for clarity:
        - Production: SUM(production_output) AS total_production
-       - Utilization: ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100), 2) AS utilization_percent
-       - Efficiency: ROUND(AVG(efficiency), 2) AS efficiency_percent when using daily_utilization
+       - Utilization: ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100)::numeric, 2) AS utilization_percent
+       - Efficiency: ROUND(AVG(efficiency)::numeric, 2) AS efficiency_percent when using daily_utilization
        - Consumption: SUM(daily_consumption) AS total_consumption
        - Time periods: production_date, production_month, production_hour
        - Always use device_name AS machine_name for consistency
+       - CRITICAL: Always cast AVG() to ::numeric before ROUND() to avoid PostgreSQL errors
     
     7. Data quality handling:
        - Handle NULL values: WHERE production_output IS NOT NULL
@@ -536,6 +537,16 @@ def get_enhanced_sql_chain(db):
         - Always include a metric_type column to distinguish highest/lowest results
         - For comparison queries: add context columns like reading_count, date ranges
     
+    10. For ROUND function (CRITICAL - PostgreSQL casting requirement):
+        - PostgreSQL ROUND(numeric, integer) works but ROUND(double precision, integer) fails
+        - AVG() returns double precision by default, so cast to numeric before ROUND
+        - ALWAYS use ::numeric cast with ROUND for AVG calculations:
+          CORRECT: ROUND(AVG(efficiency)::numeric, 2)
+          INCORRECT: ROUND(AVG(efficiency), 2)
+        - Also applies to calculated percentages:
+          CORRECT: ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100)::numeric, 2)
+        - Apply to MIN/MAX with decimals: ROUND(MIN(value)::numeric, 2)
+    
     POSTGRESQL EXAMPLES:
     
     Question: "Show all three machines production by each machine in April with bar chart for all 30 day"
@@ -554,7 +565,7 @@ def get_enhanced_sql_chain(db):
     Question: "Plot the bar chart showing each machine's efficiency on April 1 2025"
     SQL Query: SELECT 
         device_name AS machine_name,
-        ROUND((SUM(production_output) / NULLIF(SUM(target_output), 0)) * 100, 2) AS efficiency_percent
+        ROUND(((SUM(production_output) / NULLIF(SUM(target_output), 0)) * 100)::numeric, 2) AS efficiency_percent
     FROM hourly_production 
     WHERE DATE_TRUNC('day', actual_start_time) = '2025-04-01'::date
         AND production_output IS NOT NULL 
@@ -577,7 +588,7 @@ def get_enhanced_sql_chain(db):
     Question: "Show machine efficiency for each machine in April 2025"
     SQL Query: SELECT 
         device_name AS machine_name,
-        ROUND(AVG((production_output / NULLIF(target_output, 0)) * 100), 2) AS efficiency_percent
+        ROUND(AVG((production_output / NULLIF(target_output, 0)) * 100)::numeric, 2) AS efficiency_percent
     FROM hourly_production 
     WHERE EXTRACT(YEAR FROM actual_start_time) = 2025 
         AND EXTRACT(MONTH FROM actual_start_time) = 4
@@ -614,7 +625,7 @@ def get_enhanced_sql_chain(db):
     SQL Query: SELECT 
         DATE_TRUNC('day', actual_start_time)::date AS production_date,
         device_name AS machine_name,
-        ROUND(AVG(efficiency), 2) AS efficiency_percent
+        ROUND(AVG(efficiency)::numeric, 2) AS efficiency_percent
     FROM daily_utilization 
     WHERE actual_start_time >= CURRENT_DATE - INTERVAL '1 month'
         AND efficiency IS NOT NULL
@@ -625,7 +636,7 @@ def get_enhanced_sql_chain(db):
     SQL Query: SELECT 
         DATE_TRUNC('month', actual_start_time)::date AS production_month,
         device_name AS machine_name,
-        ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100), 2) AS utilization_percent
+        ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100)::numeric, 2) AS utilization_percent
     FROM daily_utilization 
     WHERE actual_start_time >= CURRENT_DATE - INTERVAL '6 months'
         AND on_time_seconds IS NOT NULL
@@ -664,8 +675,8 @@ def get_enhanced_sql_chain(db):
         DATE_TRUNC('month', dp.actual_start_time)::date AS production_month,
         dp.device_name AS machine_name,
         SUM(dp.production_output) AS total_production,
-        ROUND(AVG(du.efficiency), 2) AS efficiency_percent,
-        ROUND(AVG((du.on_time_seconds / NULLIF(du.total_window_time_seconds, 0)) * 100), 2) AS utilization_percent,
+        ROUND(AVG(du.efficiency)::numeric, 2) AS efficiency_percent,
+        ROUND(AVG((du.on_time_seconds / NULLIF(du.total_window_time_seconds, 0)) * 100)::numeric, 2) AS utilization_percent,
         SUM(dc.daily_consumption) AS total_consumption
     FROM daily_production dp
     LEFT JOIN daily_utilization du ON dp.device_name = du.device_name 
@@ -709,7 +720,7 @@ def get_enhanced_sql_chain(db):
     Question: "show highest efficiency machine this month"
     SQL Query: SELECT 
         device_name AS machine_name,
-        ROUND(AVG(efficiency), 2) AS efficiency_percent,
+        ROUND(AVG(efficiency)::numeric, 2) AS efficiency_percent,
         COUNT(*) AS reading_count
     FROM daily_utilization 
     WHERE EXTRACT(YEAR FROM actual_start_time) = EXTRACT(YEAR FROM CURRENT_DATE)
