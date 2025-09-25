@@ -54,6 +54,258 @@ def setup_logging():
 
 logger = setup_logging()
 
+def calculate_production_metrics(db: SQLDatabase, device_name: str = None, time_period: str = 'daily', start_date: str = None, end_date: str = None):
+    """Calculate production metrics across different time granularities"""
+    try:
+        # Base query components
+        table_map = {
+            'hourly': 'hourly_production',
+            'daily': 'daily_production', 
+            'monthly': 'daily_production'  # Aggregate from daily for monthly
+        }
+        
+        time_group_map = {
+            'hourly': "time_slot",
+            'daily': "DATE_TRUNC('day', actual_start_time)::date",
+            'monthly': "DATE_TRUNC('month', actual_start_time)::date"
+        }
+        
+        table = table_map.get(time_period, 'daily_production')
+        time_group = time_group_map.get(time_period, "DATE_TRUNC('day', actual_start_time)::date")
+        
+        # Build WHERE clause
+        where_conditions = ["production_output IS NOT NULL", "production_output > 0"]
+        
+        if device_name:
+            where_conditions.append(f"device_name = '{device_name}'")
+        
+        if start_date:
+            where_conditions.append(f"actual_start_time >= '{start_date}'::date")
+        
+        if end_date:
+            where_conditions.append(f"actual_start_time <= '{end_date}'::date")
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        # Build query
+        query = f"""
+        SELECT 
+            {time_group} AS time_period,
+            device_name AS machine_name,
+            SUM(production_output) AS total_production,
+            AVG(production_output) AS avg_production,
+            COUNT(*) AS production_count
+        FROM {table}
+        WHERE {where_clause}
+        GROUP BY {time_group}, device_name
+        ORDER BY time_period, device_name
+        """
+        
+        logger.info(f"Executing production metrics query: {query}")
+        return db.run(query)
+        
+    except Exception as e:
+        logger.error(f"Error calculating production metrics: {str(e)}")
+        return None
+
+def calculate_efficiency_metrics(db: SQLDatabase, device_name: str = None, time_period: str = 'daily', start_date: str = None, end_date: str = None):
+    """Calculate efficiency metrics from daily_utilization table"""
+    try:
+        time_group_map = {
+            'hourly': "DATE_TRUNC('hour', actual_start_time)",
+            'daily': "DATE_TRUNC('day', actual_start_time)::date", 
+            'monthly': "DATE_TRUNC('month', actual_start_time)::date"
+        }
+        
+        time_group = time_group_map.get(time_period, "DATE_TRUNC('day', actual_start_time)::date")
+        
+        # Build WHERE clause
+        where_conditions = ["efficiency IS NOT NULL"]
+        
+        if device_name:
+            where_conditions.append(f"device_name = '{device_name}'")
+        
+        if start_date:
+            where_conditions.append(f"actual_start_time >= '{start_date}'::date")
+        
+        if end_date:
+            where_conditions.append(f"actual_start_time <= '{end_date}'::date")
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        query = f"""
+        SELECT 
+            {time_group} AS time_period,
+            device_name AS machine_name,
+            ROUND(AVG(efficiency), 2) AS efficiency_percent,
+            ROUND(MIN(efficiency), 2) AS min_efficiency,
+            ROUND(MAX(efficiency), 2) AS max_efficiency,
+            COUNT(*) AS reading_count
+        FROM daily_utilization
+        WHERE {where_clause}
+        GROUP BY {time_group}, device_name
+        ORDER BY time_period, device_name
+        """
+        
+        logger.info(f"Executing efficiency metrics query: {query}")
+        return db.run(query)
+        
+    except Exception as e:
+        logger.error(f"Error calculating efficiency metrics: {str(e)}")
+        return None
+
+def calculate_utilization_metrics(db: SQLDatabase, device_name: str = None, time_period: str = 'daily', start_date: str = None, end_date: str = None):
+    """Calculate utilization metrics from daily_utilization table"""
+    try:
+        time_group_map = {
+            'hourly': "DATE_TRUNC('hour', actual_start_time)",
+            'daily': "DATE_TRUNC('day', actual_start_time)::date",
+            'monthly': "DATE_TRUNC('month', actual_start_time)::date"
+        }
+        
+        time_group = time_group_map.get(time_period, "DATE_TRUNC('day', actual_start_time)::date")
+        
+        # Build WHERE clause
+        where_conditions = [
+            "on_time_seconds IS NOT NULL", 
+            "total_window_time_seconds IS NOT NULL",
+            "total_window_time_seconds > 0"
+        ]
+        
+        if device_name:
+            where_conditions.append(f"device_name = '{device_name}'")
+        
+        if start_date:
+            where_conditions.append(f"actual_start_time >= '{start_date}'::date")
+        
+        if end_date:
+            where_conditions.append(f"actual_start_time <= '{end_date}'::date")
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        query = f"""
+        SELECT 
+            {time_group} AS time_period,
+            device_name AS machine_name,
+            ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100), 2) AS utilization_percent,
+            ROUND(SUM(on_time_seconds) / 3600, 2) AS total_on_hours,
+            ROUND(SUM(off_time_seconds) / 3600, 2) AS total_off_hours,
+            COUNT(*) AS reading_count
+        FROM daily_utilization
+        WHERE {where_clause}
+        GROUP BY {time_group}, device_name
+        ORDER BY time_period, device_name
+        """
+        
+        logger.info(f"Executing utilization metrics query: {query}")
+        return db.run(query)
+        
+    except Exception as e:
+        logger.error(f"Error calculating utilization metrics: {str(e)}")
+        return None
+
+def calculate_consumption_metrics(db: SQLDatabase, device_name: str = None, time_period: str = 'daily', start_date: str = None, end_date: str = None):
+    """Calculate consumption metrics from daily_consumption table"""
+    try:
+        time_group_map = {
+            'hourly': "DATE_TRUNC('hour', actual_start_time)",
+            'daily': "TO_CHAR(actual_start_time, 'YYYY-MM-DD')",
+            'monthly': "DATE_TRUNC('month', actual_start_time)::date"
+        }
+        
+        time_group = time_group_map.get(time_period, "TO_CHAR(actual_start_time, 'YYYY-MM-DD')")
+        
+        # Build WHERE clause
+        where_conditions = ["daily_consumption IS NOT NULL", "daily_consumption > 0"]
+        
+        if device_name:
+            where_conditions.append(f"device_name = '{device_name}'")
+        
+        if start_date:
+            where_conditions.append(f"actual_start_time >= '{start_date}'::date")
+        
+        if end_date:
+            where_conditions.append(f"actual_start_time <= '{end_date}'::date")
+        
+        where_clause = " AND ".join(where_conditions)
+        
+        query = f"""
+        SELECT 
+            {time_group} AS time_period,
+            device_name AS machine_name,
+            SUM(daily_consumption) AS total_consumption,
+            AVG(daily_consumption) AS avg_consumption,
+            MIN(daily_consumption) AS min_consumption,
+            MAX(daily_consumption) AS max_consumption,
+            COUNT(*) AS reading_count
+        FROM daily_consumption
+        WHERE {where_clause}
+        GROUP BY {time_group}, device_name
+        ORDER BY time_period, device_name
+        """
+        
+        logger.info(f"Executing consumption metrics query: {query}")
+        return db.run(query)
+        
+    except Exception as e:
+        logger.error(f"Error calculating consumption metrics: {str(e)}")
+        return None
+
+def calculate_comprehensive_metrics(db: SQLDatabase, device_name: str = None, time_period: str = 'daily', start_date: str = None, end_date: str = None):
+    """Calculate all metrics (Production, Utilization, Consumption, Efficiency) in one comprehensive query"""
+    try:
+        time_group_map = {
+            'hourly': "DATE_TRUNC('hour', dp.actual_start_time)",
+            'daily': "DATE_TRUNC('day', dp.actual_start_time)::date",
+            'monthly': "DATE_TRUNC('month', dp.actual_start_time)::date"
+        }
+        
+        time_group = time_group_map.get(time_period, "DATE_TRUNC('day', dp.actual_start_time)::date")
+        
+        # Build WHERE clause
+        where_conditions = []
+        
+        if device_name:
+            where_conditions.append(f"dp.device_name = '{device_name}'")
+        
+        if start_date:
+            where_conditions.append(f"dp.actual_start_time >= '{start_date}'::date")
+        
+        if end_date:
+            where_conditions.append(f"dp.actual_start_time <= '{end_date}'::date")
+        
+        where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+        
+        query = f"""
+        SELECT 
+            {time_group} AS time_period,
+            dp.device_name AS machine_name,
+            COALESCE(SUM(dp.production_output), 0) AS total_production,
+            COALESCE(ROUND(AVG(du.efficiency), 2), 0) AS efficiency_percent,
+            COALESCE(ROUND(AVG((du.on_time_seconds / NULLIF(du.total_window_time_seconds, 0)) * 100), 2), 0) AS utilization_percent,
+            COALESCE(SUM(dc.daily_consumption), 0) AS total_consumption,
+            COUNT(DISTINCT dp.id) AS production_records,
+            COUNT(DISTINCT du.id) AS utilization_records,
+            COUNT(DISTINCT dc.id) AS consumption_records
+        FROM daily_production dp
+        LEFT JOIN daily_utilization du ON dp.device_name = du.device_name 
+            AND DATE_TRUNC('day', dp.actual_start_time) = DATE_TRUNC('day', du.actual_start_time)
+        LEFT JOIN daily_consumption dc ON dp.device_name = dc.device_name 
+            AND DATE_TRUNC('day', dp.actual_start_time) = DATE_TRUNC('day', dc.actual_start_time)
+        WHERE {where_clause}
+            AND dp.production_output IS NOT NULL
+        GROUP BY {time_group}, dp.device_name
+        HAVING SUM(dp.production_output) > 0
+        ORDER BY time_period, dp.device_name
+        """
+        
+        logger.info(f"Executing comprehensive metrics query: {query}")
+        return db.run(query)
+        
+    except Exception as e:
+        logger.error(f"Error calculating comprehensive metrics: {str(e)}")
+        return None
+
 def init_supabase_database(supabase_url: str, supabase_key: str, db_password: str) -> SQLDatabase:
     """Initialize Supabase database connection with logging"""
     try:
@@ -104,35 +356,88 @@ def init_supabase_client(supabase_url: str, supabase_key: str) -> Client:
 
 
 def detect_visualization_request(user_query: str):
-    """Enhanced visualization detection with better single and multi-machine support"""
+    """Enhanced visualization detection - only creates charts when explicitly requested"""
     user_query_lower = user_query.lower()
     logger.info(f"Analyzing query for visualization: {user_query}")
     
-    # Keywords that indicate visualization request
-    viz_keywords = [
-        'plot', 'chart', 'graph', 'visualize', 'show', 'display',
+    # Explicit visualization keywords - only these should trigger chart generation
+    explicit_viz_keywords = [
+        'plot', 'chart', 'graph', 'visualize', 'draw',
         'bar chart', 'line chart', 'pie chart', 'histogram', 'scatter plot',
-        'bar', 'line', 'pie', 'trend', 'comparison', 'grouped bar', 'stacked bar',
-        'pulse', 'pulse per minute', 'pulse rate', 'pulse variation', 'pulse trend'
+        'bar', 'line', 'pie', 'trend chart', 'comparison chart', 'grouped bar', 'stacked bar'
     ]
     
-    needs_viz = any(keyword in user_query_lower for keyword in viz_keywords)
+    # Keywords that should NOT trigger visualization (insights/analysis only)
+    text_only_keywords = [
+        'insights', 'analysis', 'summary', 'report', 'overview', 'details',
+        'tell me', 'give me', 'what is', 'what are', 'how much', 'how many',
+        'highest', 'lowest', 'maximum', 'minimum', 'best', 'worst',
+        'calculate', 'compute', 'find', 'get', 'retrieve'
+    ]
     
-    # Enhanced chart type detection with single machine support
+    # Check if user explicitly requested text-only response
+    wants_text_only = any(keyword in user_query_lower for keyword in text_only_keywords)
+    
+    # Only create visualization if explicitly requested AND not asking for text-only
+    needs_viz = (any(keyword in user_query_lower for keyword in explicit_viz_keywords) and 
+                 not wants_text_only)
+    
+    # Special case: trend analysis with time keywords can be visualized if not asking for text-only
+    time_trend_keywords = ['over time', 'time series', 'daily trend', 'hourly trend', 'monthly trend']
+    trend_request = any(keyword in user_query_lower for keyword in time_trend_keywords)
+    
+    # Also check for general trend analysis patterns
+    general_trend_patterns = ['trend analysis', 'trend chart', 'trending']
+    general_trend = any(pattern in user_query_lower for pattern in general_trend_patterns)
+    
+    if (trend_request or general_trend) and not wants_text_only and ('trend' in user_query_lower):
+        # If they specifically mention "trend" with time keywords or "trend analysis"
+        needs_viz = True
+    
+    # Enhanced chart type detection
     chart_type = "bar"  # default
     
     # Check for multi-machine/multi-category requests
-    multi_machine_keywords = ['all machines', 'each machine', 'by machine', 'machines production', 'three machines']
-    multi_category_keywords = ['by day', 'daily', 'monthly', 'by month','each day', 'each month']
+    multi_machine_keywords = ['all machines', 'each machine', 'by machine', 'machines production', 'three machines', 'compare machines']
+    multi_category_keywords = ['by day', 'daily', 'monthly', 'by month', 'each day', 'each month', 'hourly', 'by hour']
     
     is_multi_machine = any(keyword in user_query_lower for keyword in multi_machine_keywords)
     is_multi_category = any(keyword in user_query_lower for keyword in multi_category_keywords)
     
+    # Specific metric-based chart type detection
+    efficiency_keywords = ['efficiency', 'efficient']
+    utilization_keywords = ['utilization', 'utilise', 'utilize']
+    consumption_keywords = ['consumption', 'consume']
+    production_keywords = ['production', 'output', 'produce']
+    
+    is_efficiency = any(keyword in user_query_lower for keyword in efficiency_keywords)
+    is_utilization = any(keyword in user_query_lower for keyword in utilization_keywords)
+    is_consumption = any(keyword in user_query_lower for keyword in consumption_keywords)
+    is_production = any(keyword in user_query_lower for keyword in production_keywords)
+    
     # Determine chart type based on query content
-    if is_multi_machine and (is_multi_category or 'bar' in user_query_lower):
-        chart_type = "multi_machine_bar"
-    elif any(word in user_query_lower for word in ['line', 'trend', 'over time', 'hourly', 'daily', 'time series']):
+    if any(word in user_query_lower for word in ['line', 'trend', 'over time', 'time series', 'hourly trend', 'daily trend', 'monthly trend']):
         chart_type = "line"
+        if is_efficiency:
+            chart_type = "efficiency_line"
+        elif is_utilization:
+            chart_type = "utilization_line"
+        elif is_consumption:
+            chart_type = "consumption_line"
+    elif is_multi_machine and (is_multi_category or 'bar' in user_query_lower):
+        chart_type = "multi_machine_bar"
+        if is_efficiency:
+            chart_type = "efficiency_bar"
+        elif is_utilization:
+            chart_type = "utilization_bar"
+        elif is_consumption:
+            chart_type = "consumption_bar"
+    elif is_efficiency:
+        chart_type = "efficiency_bar"
+    elif is_utilization:
+        chart_type = "utilization_bar" 
+    elif is_consumption:
+        chart_type = "consumption_bar"
     elif any(word in user_query_lower for word in ['pie', 'proportion', 'percentage', 'share', 'distribution']):
         chart_type = "pie"
     elif any(word in user_query_lower for word in ['scatter', 'relationship', 'correlation']):
@@ -145,6 +450,7 @@ def detect_visualization_request(user_query: str):
         chart_type = "pulse_line"  # New chart type for pulse data
         
     logger.info(f"Visualization needed: {needs_viz}, Chart type: {chart_type}, Multi-machine: {is_multi_machine}")
+    logger.info(f"Metrics detected - Efficiency: {is_efficiency}, Utilization: {is_utilization}, Consumption: {is_consumption}, Production: {is_production}")
     return needs_viz, chart_type
 
 def get_enhanced_sql_chain(db):
@@ -168,40 +474,67 @@ def get_enhanced_sql_chain(db):
     2. For multi-machine production queries by time period:
        - Always include device_name/machine_name as a separate column
        - Use DATE_TRUNC('day', actual_start_time) for daily grouping
+       - Use DATE_TRUNC('month', actual_start_time) for monthly grouping
+       - Use DATE_TRUNC('hour', actual_start_time) for hourly grouping
        - Use SUM() for production values
        - GROUP BY both time period AND machine/device
        - ORDER BY time period, then machine name
     
-    3. For machine efficiency queries:
-       - Calculate efficiency as a percentage: (actual_output / NULLIF(target_output, 0)) * 100 AS efficiency
+    3. For machine efficiency and utilization queries:
+       - For efficiency: Calculate as a percentage using daily_utilization table:
+         (production_output / NULLIF(on_time_seconds, 0)) * 100 AS efficiency_percent
+       - For utilization: Calculate as a percentage using daily_utilization table:
+         (on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100 AS utilization_percent
        - Use NULLIF to avoid division by zero
        - Include machine/device name
        - Filter for specific dates if mentioned
-       - ORDER BY efficiency DESC or machine name
+       - ORDER BY efficiency/utilization DESC or machine name
+       - For monthly metrics, aggregate the daily values
     
-    4. For April 2025 data specifically:
-       - Use WHERE clause: WHERE DATE_TRUNC('month', actual_start_time) = '2025-04-01'::date
+    4. For consumption queries:
+       - Use daily_consumption table for daily consumption values
+       - Properly aggregate consumption metrics by machine/device and date
+       - For monthly consumption, use DATE_TRUNC('month', actual_start_time) and SUM(daily_consumption)
+       - For hourly consumption, use DATE_TRUNC('hour', actual_start_time) if available
+    
+    5. For time period grouping:
+       - Use WHERE clause for specific months: WHERE DATE_TRUNC('month', actual_start_time) = '2025-04-01'::date
        - Or use: WHERE EXTRACT(YEAR FROM actual_start_time) = 2025 AND EXTRACT(MONTH FROM actual_start_time) = 4
+       - For daily data: DATE_TRUNC('day', actual_start_time) AS production_date
+       - For monthly data: DATE_TRUNC('month', actual_start_time) AS production_month
+       - For hourly data: DATE_TRUNC('hour', actual_start_time) AS production_hour
     
-    5. For daily data:
-       - Use DATE_TRUNC('day', actual_start_time) for grouping
-       - Alias as 'production_date' or 'day'
+    6. Column naming conventions for clarity:
+       - Production: SUM(production_output) AS total_production
+       - Utilization: ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100), 2) AS utilization_percent
+       - Efficiency: ROUND(AVG(efficiency), 2) AS efficiency_percent when using daily_utilization
+       - Consumption: SUM(daily_consumption) AS total_consumption
+       - Time periods: production_date, production_month, production_hour
+       - Always use device_name AS machine_name for consistency
     
-    6. Column naming conventions:
-       - Use clear aliases: production_output AS daily_production
-       - Use device_name AS machine_name for consistency
-       - Use DATE_TRUNC('day', actual_start_time) AS production_date
-       - Use efficiency AS efficiency_percent
-    
-    7. Data quality:
+    7. Data quality handling:
        - Handle NULL values: WHERE production_output IS NOT NULL
        - Filter out zero values if needed: AND production_output > 0
+       - Join tables appropriately for cross-metric analysis
        
-    8. For pulse per minute calculations:
-        - Use LAG() function: LAG(length) OVER (PARTITION BY device_name ORDER BY timestamp)
-        - Calculate pulse as: length - LAG(length) OVER (PARTITION BY device_name ORDER BY timestamp) AS pulse_per_minute
-        - Filter out NULL values from LAG calculation
-        - Order by timestamp for proper sequence
+    8. For trend analysis and line charts:
+        - Always include a time-based column for the X-axis (hourly, daily, or monthly)
+        - For multi-machine line charts, ensure to include device_name for color separation
+        - Order results chronologically: ORDER BY time_column, device_name
+        - For hourly trends, use time_slot or EXTRACT(HOUR FROM actual_start_time) 
+        - Ensure time periods are consecutive for smooth line charts
+    
+    9. For highest/lowest queries (CRITICAL - avoid UNION syntax errors):
+        - For single highest/lowest: Use simple ORDER BY ... DESC/ASC LIMIT 1
+        - For both highest AND lowest in same query: Use CTE (Common Table Expression)
+        - NEVER use UNION with ORDER BY LIMIT directly - wrap in subqueries or CTEs
+        - Example pattern for "highest and lowest":
+          WITH data AS (SELECT ...), 
+          highest AS (SELECT ... FROM data ORDER BY value DESC LIMIT 1),
+          lowest AS (SELECT ... FROM data ORDER BY value ASC LIMIT 1)
+          SELECT * FROM highest UNION ALL SELECT * FROM lowest
+        - Always include a metric_type column to distinguish highest/lowest results
+        - For comparison queries: add context columns like reading_count, date ranges
     
     POSTGRESQL EXAMPLES:
     
@@ -277,6 +610,128 @@ def get_enhanced_sql_chain(db):
         AND length IS NOT NULL
     ORDER BY timestamp
     
+    Question: "Show daily efficiency for all machines over the past month"
+    SQL Query: SELECT 
+        DATE_TRUNC('day', actual_start_time)::date AS production_date,
+        device_name AS machine_name,
+        ROUND(AVG(efficiency), 2) AS efficiency_percent
+    FROM daily_utilization 
+    WHERE actual_start_time >= CURRENT_DATE - INTERVAL '1 month'
+        AND efficiency IS NOT NULL
+    GROUP BY DATE_TRUNC('day', actual_start_time), device_name
+    ORDER BY production_date, machine_name
+    
+    Question: "Show monthly utilization trend for all machines"
+    SQL Query: SELECT 
+        DATE_TRUNC('month', actual_start_time)::date AS production_month,
+        device_name AS machine_name,
+        ROUND(AVG((on_time_seconds / NULLIF(total_window_time_seconds, 0)) * 100), 2) AS utilization_percent
+    FROM daily_utilization 
+    WHERE actual_start_time >= CURRENT_DATE - INTERVAL '6 months'
+        AND on_time_seconds IS NOT NULL
+        AND total_window_time_seconds IS NOT NULL
+        AND total_window_time_seconds > 0
+    GROUP BY DATE_TRUNC('month', actual_start_time), device_name
+    ORDER BY production_month, machine_name
+    
+    Question: "Show daily consumption by machine for this week"
+    SQL Query: SELECT 
+        TO_CHAR(actual_start_time, 'YYYY-MM-DD') AS production_date,
+        device_name AS machine_name,
+        SUM(daily_consumption) AS total_consumption
+    FROM daily_consumption 
+    WHERE actual_start_time >= CURRENT_DATE - INTERVAL '7 days'
+        AND daily_consumption IS NOT NULL
+        AND daily_consumption > 0
+    GROUP BY TO_CHAR(actual_start_time, 'YYYY-MM-DD'), device_name
+    ORDER BY production_date, machine_name
+    
+    Question: "Show hourly production trend for Machine1 today"
+    SQL Query: SELECT 
+        time_slot AS production_hour,
+        device_name AS machine_name,
+        SUM(production_output) AS total_production
+    FROM hourly_production 
+    WHERE DATE_TRUNC('day', start_date_time) = CURRENT_DATE
+        AND device_name = 'Machine1'
+        AND production_output IS NOT NULL
+        AND production_output > 0
+    GROUP BY time_slot, device_name
+    ORDER BY time_slot
+    
+    Question: "Compare all metrics for machines monthly"
+    SQL Query: SELECT 
+        DATE_TRUNC('month', dp.actual_start_time)::date AS production_month,
+        dp.device_name AS machine_name,
+        SUM(dp.production_output) AS total_production,
+        ROUND(AVG(du.efficiency), 2) AS efficiency_percent,
+        ROUND(AVG((du.on_time_seconds / NULLIF(du.total_window_time_seconds, 0)) * 100), 2) AS utilization_percent,
+        SUM(dc.daily_consumption) AS total_consumption
+    FROM daily_production dp
+    LEFT JOIN daily_utilization du ON dp.device_name = du.device_name 
+        AND DATE_TRUNC('day', dp.actual_start_time) = DATE_TRUNC('day', du.actual_start_time)
+    LEFT JOIN daily_consumption dc ON dp.device_name = dc.device_name 
+        AND DATE_TRUNC('day', dp.actual_start_time) = DATE_TRUNC('day', dc.actual_start_time)
+    WHERE dp.actual_start_time >= CURRENT_DATE - INTERVAL '6 months'
+    GROUP BY DATE_TRUNC('month', dp.actual_start_time), dp.device_name
+    ORDER BY production_month, machine_name
+    
+    Question: "give me the highest and lowest production in September 2025"
+    SQL Query: WITH production_data AS (
+        SELECT 
+            device_name AS machine_name,
+            TO_CHAR(DATE_TRUNC('day', actual_start_time), 'YYYY-MM-DD') AS production_date,
+            SUM(production_output) AS total_production
+        FROM daily_production
+        WHERE EXTRACT(YEAR FROM actual_start_time) = 2025
+          AND EXTRACT(MONTH FROM actual_start_time) = 9
+          AND production_output IS NOT NULL
+          AND production_output > 0
+        GROUP BY device_name, DATE_TRUNC('day', actual_start_time)
+    ),
+    highest AS (
+        SELECT 'Highest' as metric_type, machine_name, production_date, total_production
+        FROM production_data
+        ORDER BY total_production DESC
+        LIMIT 1
+    ),
+    lowest AS (
+        SELECT 'Lowest' as metric_type, machine_name, production_date, total_production
+        FROM production_data
+        ORDER BY total_production ASC
+        LIMIT 1
+    )
+    SELECT * FROM highest
+    UNION ALL
+    SELECT * FROM lowest
+    ORDER BY total_production DESC
+    
+    Question: "show highest efficiency machine this month"
+    SQL Query: SELECT 
+        device_name AS machine_name,
+        ROUND(AVG(efficiency), 2) AS efficiency_percent,
+        COUNT(*) AS reading_count
+    FROM daily_utilization 
+    WHERE EXTRACT(YEAR FROM actual_start_time) = EXTRACT(YEAR FROM CURRENT_DATE)
+        AND EXTRACT(MONTH FROM actual_start_time) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND efficiency IS NOT NULL
+    GROUP BY device_name
+    ORDER BY efficiency_percent DESC
+    LIMIT 1
+    
+    Question: "find lowest consumption machine last week"
+    SQL Query: SELECT 
+        device_name AS machine_name,
+        SUM(daily_consumption) AS total_consumption,
+        AVG(daily_consumption) AS avg_consumption
+    FROM daily_consumption 
+    WHERE actual_start_time >= CURRENT_DATE - INTERVAL '7 days'
+        AND daily_consumption IS NOT NULL
+        AND daily_consumption > 0
+    GROUP BY device_name
+    ORDER BY total_consumption ASC
+    LIMIT 1
+    
     Write only the SQL query and nothing else. Do not wrap it in backticks or other formatting.
     
     Question: {question}
@@ -292,7 +747,7 @@ def get_enhanced_sql_chain(db):
         api_version=get_env_var("AZURE_OPENAI_API_VERSION"),
         azure_deployment=get_env_var("AZURE_OPENAI_DEPLOYMENT_NAME"),
         temperature=0,
-        max_tokens=800,
+        max_tokens=3000,
     )
     
     def get_schema(_):
@@ -423,19 +878,97 @@ def create_enhanced_visualization(df, chart_type, user_query):
                                title=f"Grouped Bar Chart: {y_col} by {x_col} and {color_col}",
                                barmode='group')
         
-        # Other chart types (keeping existing logic)
-        elif chart_type == "line":
+        # Enhanced line charts with proper time-series support
+        elif chart_type in ["line", "efficiency_line", "utilization_line", "consumption_line"]:
             if len(df.columns) >= 2:
-                x_col = df.columns[0]
-                y_col = numeric_cols[0] if numeric_cols else df.columns[1]
-                color_col = None
+                # Find appropriate columns for line chart
+                time_col = None
+                value_col = None
+                machine_col = None
                 
-                # Check if we have machine data for multi-line chart
-                if 'machine_name' in df.columns or 'device_name' in df.columns:
-                    color_col = 'machine_name' if 'machine_name' in df.columns else 'device_name'
+                # Find time-based column
+                for col in df.columns:
+                    if col.lower() in ['production_date', 'date', 'production_month', 'production_hour', 'time', 'timestamp', 'day', 'month', 'hour']:
+                        time_col = col
+                        break
                 
-                fig = px.line(df, x=x_col, y=y_col, color=color_col,
-                             title=f"Line Chart: {y_col} over {x_col}")
+                # Find machine column
+                for col in df.columns:
+                    if col.lower() in ['machine_name', 'device_name', 'machine', 'device']:
+                        machine_col = col
+                        break
+                
+                # Find value column based on chart type
+                if chart_type == "efficiency_line":
+                    for col in df.columns:
+                        if 'efficiency' in col.lower():
+                            value_col = col
+                            break
+                elif chart_type == "utilization_line":
+                    for col in df.columns:
+                        if 'utilization' in col.lower():
+                            value_col = col
+                            break
+                elif chart_type == "consumption_line":
+                    for col in df.columns:
+                        if 'consumption' in col.lower():
+                            value_col = col
+                            break
+                
+                # Fallback to first numeric column if specific not found
+                if not value_col and numeric_cols:
+                    value_col = numeric_cols[0]
+                
+                # Fallback columns if specific ones not found
+                if not time_col:
+                    time_col = df.columns[0]
+                if not value_col:
+                    value_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+                
+                # Create appropriate title based on chart type
+                chart_title = "Line Chart"
+                if chart_type == "efficiency_line":
+                    chart_title = "Efficiency Trend Over Time"
+                elif chart_type == "utilization_line":
+                    chart_title = "Utilization Trend Over Time"
+                elif chart_type == "consumption_line":
+                    chart_title = "Consumption Trend Over Time"
+                else:
+                    chart_title = f"Trend: {value_col} over {time_col}"
+                
+                # Create the line chart
+                fig = px.line(df, x=time_col, y=value_col, color=machine_col,
+                             title=chart_title,
+                             labels={
+                                 time_col: "Time Period",
+                                 value_col: value_col.replace('_', ' ').title(),
+                                 machine_col: "Machine" if machine_col else None
+                             })
+                
+                # Enhanced formatting for line charts
+                fig.update_layout(
+                    height=600,
+                    showlegend=True if machine_col else False,
+                    xaxis_title_font_size=14,
+                    yaxis_title_font_size=14,
+                    title_font_size=16,
+                    hovermode='x unified'
+                )
+                
+                # Format x-axis based on data type
+                if time_col and time_col in df.columns:
+                    if df[time_col].dtype == 'datetime64[ns]' or 'date' in time_col.lower():
+                        fig.update_xaxes(
+                            tickangle=45,
+                            tickformat='%Y-%m-%d' if 'month' not in time_col.lower() else '%Y-%m'
+                        )
+                
+                # Add markers for better visibility
+                fig.update_traces(mode='lines+markers', marker_size=6)
+                
+                # Special formatting for efficiency and utilization (percentage)
+                if chart_type in ["efficiency_line", "utilization_line"]:
+                    fig.update_yaxes(ticksuffix="%")
                 
         elif chart_type == "pie":
             if len(df.columns) >= 2:
@@ -444,12 +977,82 @@ def create_enhanced_visualization(df, chart_type, user_query):
                 fig = px.pie(df, names=labels_col, values=values_col, 
                            title=f"Pie Chart: {values_col} by {labels_col}")
                 
-        elif chart_type == "bar":
+        elif chart_type in ["bar", "efficiency_bar", "utilization_bar", "consumption_bar"]:
             if len(df.columns) >= 2:
-                x_col = categorical_cols[0] if categorical_cols else df.columns[0]
-                y_col = numeric_cols[0] if numeric_cols else df.columns[1]
-                fig = px.bar(df, x=x_col, y=y_col, 
-                           title=f"Bar Chart: {y_col} by {x_col}")
+                # Smart column detection for metric-specific charts
+                x_col = None
+                y_col = None
+                color_col = None
+                
+                # Find appropriate columns based on chart type
+                if chart_type == "efficiency_bar":
+                    for col in df.columns:
+                        if 'efficiency' in col.lower():
+                            y_col = col
+                            break
+                elif chart_type == "utilization_bar":
+                    for col in df.columns:
+                        if 'utilization' in col.lower():
+                            y_col = col
+                            break
+                elif chart_type == "consumption_bar":
+                    for col in df.columns:
+                        if 'consumption' in col.lower():
+                            y_col = col
+                            break
+                
+                # Find x-axis column (time or machine)
+                for col in df.columns:
+                    if col.lower() in ['machine_name', 'device_name', 'production_date', 'production_month', 'production_hour']:
+                        if not x_col:
+                            x_col = col
+                        elif col.lower() in ['machine_name', 'device_name'] and x_col and 'production' in x_col.lower():
+                            color_col = col  # Use machine as color if time is x-axis
+                        elif col.lower() in ['production_date', 'production_month', 'production_hour'] and x_col and 'machine' in x_col.lower():
+                            color_col = col  # Use time as color if machine is x-axis
+                
+                # Fallback to default columns if specific not found
+                if not x_col:
+                    x_col = categorical_cols[0] if categorical_cols else df.columns[0]
+                if not y_col:
+                    y_col = numeric_cols[0] if numeric_cols else df.columns[1]
+                
+                # Create appropriate title
+                chart_title = "Bar Chart"
+                if chart_type == "efficiency_bar":
+                    chart_title = "Machine Efficiency Comparison"
+                elif chart_type == "utilization_bar":
+                    chart_title = "Machine Utilization Comparison"
+                elif chart_type == "consumption_bar":
+                    chart_title = "Machine Consumption Analysis"
+                else:
+                    chart_title = f"Bar Chart: {y_col} by {x_col}"
+                
+                # Create the bar chart
+                fig = px.bar(df, x=x_col, y=y_col, color=color_col,
+                           title=chart_title,
+                           labels={
+                               x_col: x_col.replace('_', ' ').title(),
+                               y_col: y_col.replace('_', ' ').title(),
+                               color_col: color_col.replace('_', ' ').title() if color_col else None
+                           })
+                
+                # Enhanced formatting for bar charts
+                fig.update_layout(
+                    height=600,
+                    showlegend=True if color_col else False,
+                    xaxis_title_font_size=14,
+                    yaxis_title_font_size=14,
+                    title_font_size=16
+                )
+                
+                # Special formatting for percentage metrics
+                if chart_type in ["efficiency_bar", "utilization_bar"]:
+                    fig.update_yaxes(ticksuffix="%")
+                    
+                # Rotate x-axis labels if needed
+                if x_col and len(df[x_col].astype(str).iloc[0]) > 10:
+                    fig.update_xaxes(tickangle=45)
         
         elif chart_type == "pulse_line":
             # Look for pulse-specific columns
@@ -515,11 +1118,33 @@ def create_enhanced_visualization(df, chart_type, user_query):
                     st.write(f"**Unique machines:** {unique_machines}")
                     st.write(f"**Machines:** {', '.join(df[machine_col].unique())}")
                 
-                # Show efficiency statistics if it's an efficiency chart
-                if chart_type == "efficiency_bar" and 'efficiency_percent' in df.columns:
+                # Show metric statistics based on chart type
+                if 'efficiency_percent' in df.columns:
                     st.write(f"**Average efficiency:** {df['efficiency_percent'].mean():.1f}%")
                     st.write(f"**Highest efficiency:** {df['efficiency_percent'].max():.1f}%")
                     st.write(f"**Lowest efficiency:** {df['efficiency_percent'].min():.1f}%")
+                
+                if 'utilization_percent' in df.columns:
+                    st.write(f"**Average utilization:** {df['utilization_percent'].mean():.1f}%")
+                    st.write(f"**Highest utilization:** {df['utilization_percent'].max():.1f}%")
+                    st.write(f"**Lowest utilization:** {df['utilization_percent'].min():.1f}%")
+                
+                if 'total_consumption' in df.columns:
+                    st.write(f"**Total consumption:** {df['total_consumption'].sum():.2f}")
+                    st.write(f"**Average consumption:** {df['total_consumption'].mean():.2f}")
+                    st.write(f"**Peak consumption:** {df['total_consumption'].max():.2f}")
+                
+                if 'total_production' in df.columns:
+                    st.write(f"**Total production:** {df['total_production'].sum():.2f}")
+                    st.write(f"**Average production:** {df['total_production'].mean():.2f}")
+                    st.write(f"**Peak production:** {df['total_production'].max():.2f}")
+                
+                # Show time period analysis for monthly/weekly trends
+                if any('month' in str(col).lower() for col in df.columns):
+                    st.write("📅 **Monthly Analysis**: Data aggregated by month for trend analysis")
+                elif any('date' in str(col).lower() for col in df.columns):
+                    if len(df) > 7:
+                        st.write("📅 **Multi-week Analysis**: Extended time period for comprehensive insights")
                 
                 st.dataframe(df)
             
@@ -670,9 +1295,9 @@ def get_enhanced_response(user_query: str, db: SQLDatabase, chat_history: list):
         
         # Step 5: Generate natural language response
         template = """
-        You are a data analyst providing insights about production data.
+        You are a data analyst providing comprehensive insights about industrial production data.
         
-        Based on the SQL query results, provide a clear, informative response.
+        Based on the SQL query results, provide a clear, informative response about the metrics.
     
         SQL Query: {query}
         User Question: {question}
@@ -681,17 +1306,38 @@ def get_enhanced_response(user_query: str, db: SQLDatabase, chat_history: list):
         {visualization_note}
         
         Guidelines:
-        1. Summarize key findings from the data
-        2. Mention specific numbers/values when relevant
-        3. If this is multi-machine data, highlight comparisons between machines
-        4. If this is time-series data, mention trends or patterns
-        5. Keep the response concise but informative
+        1. **Key Metrics Analysis**: Summarize findings for Production, Efficiency, Utilization, and Consumption
+        2. **Numerical Insights**: Include specific values, percentages, and totals when relevant
+        3. **Multi-Machine Comparisons**: Highlight differences between machines, identify top/bottom performers
+        4. **Time-Series Trends**: 
+           - For daily data: mention day-to-day variations and patterns
+           - For monthly data: focus on long-term trends and seasonal patterns
+           - For hourly data: highlight peak hours and operational patterns
+        5. **Performance Insights**: 
+           - Efficiency trends (improving/declining)
+           - Utilization patterns (consistent/variable)
+           - Production peaks and valleys
+           - Consumption optimization opportunities
+        6. **Actionable Observations**: Point out notable patterns that could indicate:
+           - Maintenance needs (declining efficiency)
+           - Optimization opportunities (low utilization periods)
+           - Production bottlenecks or peaks
+        7. **Data Quality Notes**: Mention the time period covered and number of machines analyzed
         
+        Response Style:
+        - Start with a brief summary of what the data shows
+        - Use bullet points for multiple insights
+        - Include percentage values for efficiency and utilization
+        - Mention absolute values for production and consumption
+        - Keep technical but accessible for operations teams
         
-        # In the template section
-        if 'pulse' in user_query.lower():
-            visualization_note += " The pulse calculation shows the difference in length per minute, indicating machine activity rate."
-        
+        Special Considerations:
+        - If efficiency data: Focus on performance percentages and comparisons
+        - If utilization data: Emphasize uptime vs downtime patterns
+        - If consumption data: Highlight usage patterns and potential savings
+        - If production data: Focus on output levels and capacity utilization
+        - If monthly data: Emphasize long-term trends and seasonal variations
+        - If pulse data: Explain machine activity rates and operational intensity
         
         """
         
@@ -711,7 +1357,7 @@ def get_enhanced_response(user_query: str, db: SQLDatabase, chat_history: list):
             api_version=get_env_var("AZURE_OPENAI_API_VERSION"),
             azure_deployment=get_env_var("AZURE_OPENAI_DEPLOYMENT_NAME"),  # Changed from deployment_name
             temperature=0,  # Changed from 1 to 0 for more consistent SQL generation
-            max_tokens=800,
+            max_tokens=3000,
     )
         
         
