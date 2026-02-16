@@ -1218,7 +1218,7 @@ def get_casual_response(user_query: str) -> str:
     user_query_lower = user_query.lower().strip()
     
     if any(greeting in user_query_lower for greeting in ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening']):
-        return """Hello! 👋 I'm your PlantIQ Agent powered by Supabase. I'm here to help you analyze your production data and create visualizations."""
+        return """Hello! 👋 I'm your PlantIQ Insights Agent powered by Supabase. I'm here to help you analyze your production data and create visualizations."""
 
     elif any(phrase in user_query_lower for phrase in ['how are you', 'whats up', "what's up"]):
         return """I'm doing great, thank you! 😊 Ready to help you dive into your production data stored in Supabase.
@@ -1231,7 +1231,7 @@ Is there any specific production analysis or visualization you'd like me to help
 Feel free to ask me about any production metrics you'd like to explore!"""
 
     elif any(phrase in user_query_lower for phrase in ['help', 'what can you do', 'how does this work']):
-        return """I'm your PlantIQ Agent powered by Supabase! Here's how I can help:
+        return """I'm your PlantIQ Insights Agent powered by Supabase! Here's how I can help:
 
 🔍 **Query your Supabase database** with natural language
 📊 **Create interactive visualizations** (bar charts, line charts, pie charts)
@@ -1392,7 +1392,7 @@ def get_enhanced_response(user_query: str, db: SQLDatabase, chat_history: list):
 # Streamlit UI
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        AIMessage(content="Hello! I'm your PlantIQ Agent. I can help you analyze multi-machine production data with colorful visualizations! 📊\n\nTry asking: *'Show all three machines production by each machine in April with bar chart for all 30 day'*"),
+        AIMessage(content="Hello! I'm your PlantIQ Insights Agent. I can help you analyze multi-machine production data with colorful visualizations! 📊\n\nTry asking: *'Show all three machines production by each machine in April with bar chart for all 30 day'*"),
     ]
 
 #load_dotenv()
@@ -1408,7 +1408,7 @@ if not get_env_var("AZURE_OPENAI_API_KEY"):
     st.error("⚠️ AZURE_OPENAI_API_KEY key not found. Please add AZURE_OPENAI_API_KEY to your .env file.")
     st.stop()
 
-st.set_page_config(page_title="PlantIQ Agent", page_icon="ALL_ACCOR.svg")
+st.set_page_config(page_title="PlantIQ Insights Agent", page_icon="ALL_ACCOR.svg")
 
 # Custom CSS for alignment
 st.markdown("""
@@ -1435,7 +1435,7 @@ col1, col2 = st.columns([1, 10])
 with col1:
     st.image("ALL_ACCOR.svg", width=60)
 with col2:
-    st.title("PlantIQ Agent")
+    st.title("PlantIQ Insights Agent")
 
 # Supabase sidebar
 # Replace the entire sidebar section with this simplified version:
