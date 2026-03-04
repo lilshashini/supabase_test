@@ -1408,32 +1408,40 @@ if not get_env_var("AZURE_OPENAI_API_KEY"):
     st.error("⚠️ AZURE_OPENAI_API_KEY key not found. Please add AZURE_OPENAI_API_KEY to your .env file.")
     st.stop()
 
-st.set_page_config(page_title="PlantIQ Insights Agent", page_icon="ALL_ACCOR.svg")
+# Configurable logo size - adjust this value to change logo size everywhere
+LOGO_SIZE = 60  # pixels - change this to resize the logo globally
 
-# Custom CSS for alignment
-st.markdown("""
+st.set_page_config(page_title="PlantIQ Insights Agent", page_icon="althinect.png")
+
+# Custom CSS for alignment and logo sizing
+st.markdown(f"""
     <style>
-    .logo-container {
+    .logo-container {{
         display: flex;
         align-items: center;
-    }
-    .stImage {
+    }}
+    .stImage {{
         margin-top: -20px;
-    }
-    h1 {
+    }}
+    .sidebar-logo img {{
+        width: {LOGO_SIZE}px !important;
+        margin: 0 auto;
+        display: block;
+    }}
+    h1 {{
         padding-top: 0rem !important;
         padding-bottom: 0rem !important;
         margin-top: -20px !important;
-    }
-    .main > div {
+    }}
+    .main > div {{
         padding-top: 2rem;
-    }
+    }}
     </style>
 """, unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 10])
 with col1:
-    st.image("althinect.png", width=60)
+    st.image("althinect.png", width=LOGO_SIZE)
 with col2:
     st.title("PlantIQ Insights Agent")
 
@@ -1441,6 +1449,9 @@ with col2:
 # Replace the entire sidebar section with this simplified version:
 
 with st.sidebar:
+    # Sidebar logo
+    st.image("althinect.png", width=LOGO_SIZE)
+    st.markdown("---")
     st.subheader("🔌 Database Connection")
     
     # Show connection status
@@ -1548,7 +1559,7 @@ else:
 # Chat interface
 for message in st.session_state.chat_history:
     if isinstance(message, AIMessage):
-        with st.chat_message("assistant", avatar="🤖"):
+        with st.chat_message("assistant", avatar="althinect.png"):
             st.markdown(message.content)
     elif isinstance(message, HumanMessage):
         with st.chat_message("user", avatar="👤"):
@@ -1562,7 +1573,7 @@ if user_query is not None and user_query.strip() != "":
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_query)
         
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar="althinect.png"):
         # Check if it's a greeting first (no database needed)
         if is_greeting_or_casual(user_query):
             response = get_casual_response(user_query)
