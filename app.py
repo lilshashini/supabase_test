@@ -1409,41 +1409,43 @@ if not get_env_var("AZURE_OPENAI_API_KEY"):
     st.stop()
 
 # Configurable logo size - adjust this value to change logo size everywhere
-LOGO_SIZE = 500  # pixels - sized to match the header title font
+LOGO_SIZE = 40  # pixels - change this to resize the header & sidebar logo
 
 st.set_page_config(page_title="PlantIQ Insights Agent", page_icon="althinect.png")
 
-# Custom CSS for alignment and logo sizing
+# Read logo as base64 so we can render it in HTML without column constraints
+import base64
+with open("althinect.png", "rb") as f:
+    logo_b64 = base64.b64encode(f.read()).decode()
+
+# Custom CSS + HTML header with logo that truly respects LOGO_SIZE
 st.markdown(f"""
     <style>
-    .logo-container {{
+    .header-container {{
         display: flex;
         align-items: center;
+        gap: 16px;
+        padding: 0.5rem 0 1rem 0;
     }}
-    .stImage {{
-        margin-top: -20px;
+    .header-container img {{
+        width: {LOGO_SIZE}px;
+        height: {LOGO_SIZE}px;
+        object-fit: contain;
     }}
-    .sidebar-logo img {{
-        width: {LOGO_SIZE}px !important;
-        margin: 0 auto;
-        display: block;
-    }}
-    h1 {{
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
-        margin-top: -20px !important;
+    .header-container h1 {{
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 2rem;
     }}
     .main > div {{
         padding-top: 2rem;
     }}
     </style>
+    <div class="header-container">
+        <img src="data:image/png;base64,{logo_b64}" alt="Logo" />
+        <h1>PlantIQ Insights Agent</h1>
+    </div>
 """, unsafe_allow_html=True)
-
-col1, col2 = st.columns([1, 10])
-with col1:
-    st.image("althinect.png", width=LOGO_SIZE)
-with col2:
-    st.title("PlantIQ Insights Agent")
 
 # Supabase sidebar
 # Replace the entire sidebar section with this simplified version:
