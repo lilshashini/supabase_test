@@ -1409,7 +1409,7 @@ if not get_env_var("AZURE_OPENAI_API_KEY"):
     st.stop()
 
 # Configurable logo size - adjust this value to change logo size everywhere
-LOGO_SIZE = 80  # pixels - change this to resize the header & sidebar logo
+LOGO_SIZE = 120  # pixels - change this to resize the header & sidebar logo
 
 st.set_page_config(page_title="PlantIQ Insights Agent", page_icon="althinect.png")
 
