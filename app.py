@@ -1409,7 +1409,7 @@ if not get_env_var("AZURE_OPENAI_API_KEY"):
     st.stop()
 
 # Configurable logo size - adjust this value to change logo size everywhere
-LOGO_SIZE = 60  # pixels - change this to resize the logo globally
+LOGO_SIZE = 40  # pixels - sized to match the header title font
 
 st.set_page_config(page_title="PlantIQ Insights Agent", page_icon="althinect.png")
 
@@ -1559,7 +1559,7 @@ else:
 # Chat interface
 for message in st.session_state.chat_history:
     if isinstance(message, AIMessage):
-        with st.chat_message("assistant", avatar="althinect.png"):
+        with st.chat_message("assistant", avatar="🤖"):
             st.markdown(message.content)
     elif isinstance(message, HumanMessage):
         with st.chat_message("user", avatar="👤"):
@@ -1573,7 +1573,7 @@ if user_query is not None and user_query.strip() != "":
     with st.chat_message("user", avatar="👤"):
         st.markdown(user_query)
         
-    with st.chat_message("assistant", avatar="althinect.png"):
+    with st.chat_message("assistant", avatar="🤖"):
         # Check if it's a greeting first (no database needed)
         if is_greeting_or_casual(user_query):
             response = get_casual_response(user_query)
