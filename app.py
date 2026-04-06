@@ -464,6 +464,8 @@ def get_enhanced_sql_chain(db):
     
     IMPORTANT GUIDELINES FOR POSTGRESQL:
     
+    0. The database contains data for years 2024, 2025, and 2026. Explicitly handle 2026 in the queries when the user asks for 2026 data.
+    
     1. Use PostgreSQL-specific functions and syntax:
        - Use EXTRACT() instead of YEAR(), MONTH(): EXTRACT(YEAR FROM actual_start_time)
        - Use DATE_TRUNC() for grouping: DATE_TRUNC('day', actual_start_time)
@@ -687,14 +689,14 @@ def get_enhanced_sql_chain(db):
     GROUP BY DATE_TRUNC('month', dp.actual_start_time), dp.device_name
     ORDER BY production_month, machine_name
     
-    Question: "give me the highest and lowest production in September 2025"
+    Question: "give me the highest and lowest production in September 2026"
     SQL Query: WITH production_data AS (
         SELECT 
             device_name AS machine_name,
             TO_CHAR(DATE_TRUNC('day', actual_start_time), 'YYYY-MM-DD') AS production_date,
             SUM(production_output) AS total_production
         FROM daily_production
-        WHERE EXTRACT(YEAR FROM actual_start_time) = 2025
+        WHERE EXTRACT(YEAR FROM actual_start_time) = 2026
           AND EXTRACT(MONTH FROM actual_start_time) = 9
           AND production_output IS NOT NULL
           AND production_output > 0
@@ -1205,7 +1207,7 @@ def is_greeting_or_casual(user_query: str) -> bool:
     data_keywords = [
         'production', 'machine', 'data', 'show', 'chart', 'graph', 'plot',
         'select', 'table', 'database', 'query', 'april', 'month', 'day',
-        'output', 'performance', 'efficiency', 'downtime', 'shift','pulse', 'pulse per minute', 'rate', 'length', 'variation', 'trend'
+        'output', 'performance', 'efficiency', 'downtime', 'shift','pulse', 'pulse per minute', 'rate', 'length', 'variation', 'trend', 'year', '2024', '2025', '2026'
     ]
     
     if len(user_query_lower.split()) <= 3 and not any(keyword in user_query_lower for keyword in data_keywords):
