@@ -1,23 +1,21 @@
-# Core requirements
+# Core web framework
 streamlit
+
+# Data processing & visualization
 pandas
-plotly
 numpy
+plotly
+
+# Environment & database connectivity
 python-dotenv
 supabase
-sqlalchemy
-psycopg2-binary
+sqlalchemy>=2.0.0
+psycopg[binary]
+mysql-connector-python
+
+# LangChain & AI
+langchain
 langchain-core
 langchain-community
 langchain-openai
-langchain
-mysql-connector-python
-
-
-# Optional (for Azure OpenAI)
 openai
-
-# Logging and system
-# (logging, sys, os, re, datetime, urllib are standard library)
-
-
