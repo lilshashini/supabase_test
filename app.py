@@ -310,10 +310,9 @@ def init_supabase_database(supabase_url: str, supabase_key: str, db_password: st
     """Initialize Supabase database connection with logging"""
     try:
         # Extract connection details from Supabase URL
-        # Supabase URL format: https://your-project-id.supabase.co
         project_id = supabase_url.replace('https://', '').replace('.supabase.co', '')
         
-       # Pooler connection info
+        # Pooler connection info
         host = "aws-0-ap-southeast-1.pooler.supabase.com"
         port = 6543
         database = "postgres"
@@ -322,8 +321,8 @@ def init_supabase_database(supabase_url: str, supabase_key: str, db_password: st
         # Encode password for special characters
         encoded_password = quote_plus(db_password)
 
-        # PostgreSQL connection string (Transaction Pooler)
-        db_uri = f"postgresql://{user}:{encoded_password}@{host}:{port}/{database}"
+        # FIX: Explicitly specify +psycopg2 in the URI scheme
+        db_uri = f"postgresql+psycopg2://{user}:{encoded_password}@{host}:{port}/{database}"
 
         logger.info(f"Attempting to connect to Supabase transaction pooler: {host}:{port}/{database}")
         
